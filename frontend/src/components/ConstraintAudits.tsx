@@ -42,46 +42,44 @@ export const ConstraintAudits: React.FC<ConstraintAuditsProps> = ({
   ];
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-2xl backdrop-blur mb-6">
-
+    <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm mb-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center space-x-2">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Mathematical Constraint Audit Log</h2>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-mono">
+            <ShieldCheck className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-lg font-bold text-slate-800 tracking-tight">Mathematical Constraint Audit Log</h2>
+            <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-mono font-semibold">
               OR-Tools Verified
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Automated verification ensuring all 9 hard mathematical constraints are strictly satisfied.
           </p>
         </div>
 
-        <div className="text-right font-mono text-xs text-slate-400">
-          <span className="block text-white font-bold">{solverName}</span>
-          <span className="text-[11px] text-slate-400">Execution: {solveDurationMs}ms</span>
+        <div className="text-right font-mono text-xs text-slate-600">
+          <span className="block text-slate-900 font-bold">{solverName}</span>
+          <span className="text-[11px] text-slate-500">Execution: {solveDurationMs}ms</span>
         </div>
       </div>
 
       {/* Audit Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
         {auditItems.map((item, idx) => (
-          <div key={idx} className="bg-slate-950/80 border border-slate-800 p-3.5 rounded-xl font-mono text-xs">
+          <div key={idx} className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl font-mono text-xs">
             <div className="flex items-center space-x-2">
               {item.passed ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               ) : (
-                <AlertOctagon className="w-4 h-4 text-rose-400 shrink-0" />
+                <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" />
               )}
-              <h4 className="font-bold text-white leading-tight">{item.title}</h4>
+              <h4 className="font-bold text-slate-900 leading-tight">{item.title}</h4>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">{item.desc}</p>
+            <p className="text-[11px] text-slate-600 mt-1.5 leading-relaxed">{item.desc}</p>
           </div>
         ))}
       </div>
-
     </div>
   );
 };

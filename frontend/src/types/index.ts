@@ -167,3 +167,15 @@ export interface TimeToSurgeResponse {
   stops_surge: TimeToSurgeItem[];
   is_demo_data: boolean;
 }
+
+export type UserRole = 'PASSENGER' | 'OFFICER' | 'POLICE';
+
+export interface UserSession {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  agency: string;
+  badge_number?: string;
+  token: string;
+}

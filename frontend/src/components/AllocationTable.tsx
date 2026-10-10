@@ -78,29 +78,29 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
     switch (risk) {
       case 'CRITICAL':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" aria-hidden="true" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-rose-50 text-rose-800 border border-rose-200">
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" aria-hidden="true" />
             <span>CRITICAL PEAK</span>
           </span>
         );
       case 'HIGH':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-amber-500/20 text-amber-300 border border-amber-500/40">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-amber-50 text-amber-800 border border-amber-200">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-600" aria-hidden="true" />
             <span>HIGH SURGE</span>
           </span>
         );
       case 'MODERATE':
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-yellow-500/20 text-yellow-300 border border-yellow-500/40">
-            <Clock className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-yellow-50 text-yellow-800 border border-yellow-200">
+            <Clock className="w-3.5 h-3.5 text-yellow-600" aria-hidden="true" />
             <span>MODERATE</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+          <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
             <span>LOW RISK</span>
           </span>
         );
@@ -108,27 +108,27 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-2xl backdrop-blur mb-6">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center space-x-2">
-            <Layers className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">
+            <Layers className="w-5 h-5 text-pink-600" />
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               Bus Allocation & Crowd-Risk Ledger
             </h2>
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-mono">
+            <span className="text-[10px] bg-pink-50 text-pink-700 border border-pink-200 px-2 py-0.5 rounded font-mono font-bold">
               4-Stop Grid
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Real-time status comparison between baseline fleet allocations and OR-Tools MILP redistribution recommendations.
           </p>
         </div>
 
-        <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
+        <div className="flex items-center space-x-2 text-xs font-mono text-slate-500">
           <span>Fleet Conserved:</span>
-          <span className="font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+          <span className="font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
             {fleet.total_buses} / {fleet.total_buses} Buses
           </span>
         </div>
@@ -138,7 +138,7 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
       <div className="hidden md:block overflow-x-auto mt-4">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="border-b border-slate-800 text-[11px] font-mono uppercase text-slate-400 tracking-wider">
+            <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-mono uppercase text-slate-500 tracking-wider">
               <th className="py-3 px-3">Festival Stop</th>
               <th className="py-3 px-3 text-right">Initial Queue</th>
               <th className="py-3 px-3 text-right">Predicted 2h Demand</th>
@@ -148,33 +148,33 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
               <th className="py-3 px-3">Recommended Optimizer Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-mono">
+          <tbody className="divide-y divide-slate-100 font-mono">
             {rows.map((row) => (
               <tr
                 key={row.stop.id}
-                className="hover:bg-slate-800/40 transition-colors"
+                className="hover:bg-slate-50/80 transition-colors"
               >
                 {/* Stop Name & ID */}
                 <td className="py-3.5 px-3">
-                  <div className="font-bold text-white text-sm font-sans">{row.stop.name}</div>
-                  <div className="text-[10px] text-slate-400">{row.stop.id} • Cap: {row.stop.capacity} pax</div>
+                  <div className="font-bold text-slate-900 text-sm font-sans">{row.stop.name}</div>
+                  <div className="text-[10px] text-slate-500">{row.stop.id} • Cap: {row.stop.capacity} pax</div>
                 </td>
 
                 {/* Initial Queue */}
                 <td className="py-3.5 px-3 text-right">
-                  <span className="font-bold text-slate-200">{row.initialQueue}</span>
+                  <span className="font-bold text-slate-800">{row.initialQueue}</span>
                   <span className="text-[10px] text-slate-500 ml-1">pax</span>
                 </td>
 
                 {/* Predicted Demand */}
                 <td className="py-3.5 px-3 text-right">
-                  <span className="font-bold text-indigo-300">{row.total2hArrivals}</span>
+                  <span className="font-bold text-pink-700">{row.total2hArrivals}</span>
                   <span className="text-[10px] text-slate-500 ml-1">pax</span>
                 </td>
 
                 {/* Current Buses */}
                 <td className="py-3.5 px-3 text-center">
-                  <span className="inline-block px-2.5 py-1 rounded bg-slate-800 text-slate-200 font-bold border border-slate-700">
+                  <span className="inline-block px-2.5 py-1 rounded bg-slate-100 text-slate-800 font-bold border border-slate-200">
                     {row.currentBuses}
                   </span>
                 </td>
@@ -184,17 +184,17 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
                   <div className="inline-flex items-center space-x-1.5">
                     <span
                       className={`px-2.5 py-1 rounded font-bold border ${row.netChange > 0
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                          : row.netChange < 0
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                            : 'bg-slate-800 text-slate-300 border-slate-700'
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : row.netChange < 0
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : 'bg-slate-100 text-slate-800 border-slate-200'
                         }`}
                     >
                       {row.recommendedBuses}
                     </span>
                     {row.netChange !== 0 && (
                       <span
-                        className={`text-[10px] font-bold ${row.netChange > 0 ? 'text-emerald-400' : 'text-amber-400'
+                        className={`text-[10px] font-bold ${row.netChange > 0 ? 'text-emerald-700' : 'text-amber-800'
                           }`}
                       >
                         ({row.netChange > 0 ? `+${row.netChange}` : row.netChange})
@@ -208,11 +208,11 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
 
                 {/* Recommended Action */}
                 <td className="py-3.5 px-3 font-sans">
-                  <div className="flex items-center space-x-1.5 text-xs text-slate-300">
+                  <div className="flex items-center space-x-1.5 text-xs text-slate-700">
                     {row.netChange !== 0 ? (
-                      <Bus className={`w-3.5 h-3.5 shrink-0 ${row.netChange > 0 ? 'text-emerald-400' : 'text-amber-400'}`} />
+                      <Bus className={`w-3.5 h-3.5 shrink-0 ${row.netChange > 0 ? 'text-emerald-600' : 'text-amber-600'}`} />
                     ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                     )}
                     <span>{row.actionDescription}</span>
                   </div>
@@ -228,39 +228,39 @@ export const AllocationTable: React.FC<AllocationTableProps> = ({
         {rows.map((row) => (
           <div
             key={row.stop.id}
-            className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-3 font-mono text-xs"
+            className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 font-mono text-xs shadow-sm"
           >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
               <div>
-                <h3 className="font-bold text-white text-sm font-sans">{row.stop.name}</h3>
-                <span className="text-[10px] text-slate-400">{row.stop.id}</span>
+                <h3 className="font-bold text-slate-900 text-sm font-sans">{row.stop.name}</h3>
+                <span className="text-[10px] text-slate-500">{row.stop.id}</span>
               </div>
               {getRiskBadge(row.riskLevel)}
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div>
-                <span className="text-slate-400 block text-[10px]">INITIAL QUEUE</span>
-                <span className="font-bold text-white">{row.initialQueue} pax</span>
+                <span className="text-slate-500 block text-[10px]">INITIAL QUEUE</span>
+                <span className="font-bold text-slate-900">{row.initialQueue} pax</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">PREDICTED 2H DEMAND</span>
-                <span className="font-bold text-indigo-300">{row.total2hArrivals} pax</span>
+                <span className="text-slate-500 block text-[10px]">PREDICTED 2H DEMAND</span>
+                <span className="font-bold text-pink-700">{row.total2hArrivals} pax</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">CURRENT BUSES</span>
-                <span className="font-bold text-slate-300">{row.currentBuses} Buses</span>
+                <span className="text-slate-500 block text-[10px]">CURRENT BUSES</span>
+                <span className="font-bold text-slate-800">{row.currentBuses} Buses</span>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">RECOMMENDED BUSES</span>
-                <span className="font-bold text-emerald-400">
+                <span className="text-slate-500 block text-[10px]">RECOMMENDED BUSES</span>
+                <span className="font-bold text-emerald-800">
                   {row.recommendedBuses} Buses ({row.netChange >= 0 ? `+${row.netChange}` : row.netChange})
                 </span>
               </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 p-2.5 rounded-lg text-slate-300 font-sans text-xs flex items-center space-x-2">
-              <Bus className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <div className="bg-white border border-slate-200 p-2.5 rounded-lg text-slate-700 font-sans text-xs flex items-center space-x-2">
+              <Bus className="w-3.5 h-3.5 text-pink-600 shrink-0" />
               <span>{row.actionDescription}</span>
             </div>
           </div>

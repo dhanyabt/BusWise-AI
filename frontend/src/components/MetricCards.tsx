@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bus, MapPin, Users, TrendingUp, AlertTriangle, Cpu, Clock, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Bus, MapPin, Users, TrendingUp, AlertTriangle, Cpu, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { FleetSummary, ForecastResponse, OptimizationResponse } from '../types';
 
 interface MetricCardsProps {
@@ -47,10 +47,10 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
     if (isOptimizing) {
       return {
         label: 'SOLVING...',
-        color: 'text-indigo-400',
-        bg: 'bg-indigo-500/10 border-indigo-500/30',
+        color: 'text-pink-700',
+        bg: 'bg-pink-50 border-pink-200',
         sub: 'OR-Tools CBC Processing',
-        icon: <RefreshCw className="w-4 h-4 text-indigo-400 animate-spin" />,
+        icon: <RefreshCw className="w-4 h-4 text-pink-600 animate-spin" />,
       };
     }
 
@@ -60,128 +60,134 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
       case 'OPTIMAL':
         return {
           label: 'OPTIMAL',
-          color: 'text-emerald-400',
-          bg: 'bg-emerald-500/10 border-emerald-500/30',
+          color: 'text-emerald-700',
+          bg: 'bg-emerald-50 border-emerald-200',
           sub: `${optimization.transfers.length} Transfers (${optimization.solve_duration_ms}ms)`,
-          icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
+          icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
         };
       case 'FEASIBLE':
         return {
           label: 'FEASIBLE',
-          color: 'text-cyan-400',
-          bg: 'bg-cyan-500/10 border-cyan-500/30',
+          color: 'text-emerald-700',
+          bg: 'bg-emerald-50 border-emerald-200',
           sub: `${optimization.transfers.length} Transfers (${optimization.solve_duration_ms}ms)`,
-          icon: <Cpu className="w-4 h-4 text-cyan-400" />,
+          icon: <Cpu className="w-4 h-4 text-emerald-600" />,
         };
       case 'INFEASIBLE':
         return {
           label: 'INFEASIBLE',
-          color: 'text-rose-400',
-          bg: 'bg-rose-500/10 border-rose-500/30',
+          color: 'text-rose-700',
+          bg: 'bg-rose-50 border-rose-200',
           sub: 'Fleet constraints binding',
-          icon: <AlertCircle className="w-4 h-4 text-rose-400" />,
+          icon: <AlertCircle className="w-4 h-4 text-rose-600" />,
         };
       case 'UNAVAILABLE':
         return {
           label: 'UNAVAILABLE',
-          color: 'text-amber-400',
-          bg: 'bg-amber-500/10 border-amber-500/30',
+          color: 'text-amber-800',
+          bg: 'bg-amber-50 border-amber-200',
           sub: 'Fallback simulation active',
-          icon: <AlertTriangle className="w-4 h-4 text-amber-400" />,
+          icon: <AlertTriangle className="w-4 h-4 text-amber-600" />,
         };
       default:
         return {
           label: 'READY',
-          color: 'text-slate-300',
-          bg: 'bg-slate-800 border-slate-700',
+          color: 'text-slate-800',
+          bg: 'bg-slate-50 border-slate-200',
           sub: 'Click Run Optimizer',
-          icon: <Cpu className="w-4 h-4 text-slate-400" />,
+          icon: <Cpu className="w-4 h-4 text-slate-500" />,
         };
     }
   };
 
   const statusInfo = getStatusBadge();
+  const activeBuses = fleet.total_buses - fleet.maintenance_buses;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-      {/* 1. Total Fleet */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 shadow-lg backdrop-blur flex flex-col justify-between">
+      {/* 1. Total Fleet & Active Fleet */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Total Fleet</span>
-          <div className="p-1.5 bg-indigo-500/10 rounded-lg text-indigo-400">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Fleet Status</span>
+          <div className="p-1.5 bg-pink-50 rounded-lg text-pink-600">
             <Bus className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2">
-          <span className="text-xl font-bold text-white font-mono">{fleet.total_buses} Buses</span>
-          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">100% Fleet Conserved</p>
+          <span className="text-xl font-bold text-slate-900 font-mono">{fleet.total_buses} Total</span>
+          <p className="text-[10px] text-emerald-700 mt-0.5 font-mono font-bold flex items-center space-x-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+            <span>{activeBuses} Active in Service</span>
+          </p>
         </div>
       </div>
 
       {/* 2. Bus Stops */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 shadow-lg backdrop-blur flex flex-col justify-between">
+      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Bus Stops</span>
-          <div className="p-1.5 bg-sky-500/10 rounded-lg text-sky-400">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Bus Stops</span>
+          <div className="p-1.5 bg-sky-50 rounded-lg text-sky-600">
             <MapPin className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2">
-          <span className="text-xl font-bold text-white font-mono">4 Stops</span>
-          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">Festival Transport Grid</p>
+          <span className="text-xl font-bold text-slate-900 font-mono">4 Stops</span>
+          <p className="text-[10px] text-slate-500 mt-0.5 font-mono">Festival Grid Hubs</p>
         </div>
       </div>
 
-      {/* 3. Initial Passenger Queue */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 shadow-lg backdrop-blur flex flex-col justify-between">
+      {/* 3. Crowded / High-Risk Locations */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Initial Queue</span>
-          <div className="p-1.5 bg-purple-500/10 rounded-lg text-purple-400">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Crowd / High-Risk</span>
+          <div className="p-1.5 bg-rose-50 rounded-lg text-rose-600">
+            <AlertTriangle className="w-4 h-4" />
+          </div>
+        </div>
+        <div className="mt-2">
+          <span className={`text-xl font-bold font-mono ${criticalStopsCount > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+            {criticalStopsCount} / 4 Stops
+          </span>
+          <p className="text-[10px] text-rose-700 mt-0.5 font-mono font-medium">
+            {criticalStopsCount > 0 ? 'Surge Risk Detected' : 'All Hubs Clear'}
+          </p>
+        </div>
+      </div>
+
+      {/* 4. Initial Passenger Queue */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Initial Queue</span>
+          <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600">
             <Users className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2">
-          <span className="text-xl font-bold text-white font-mono">{totalQueue} pax</span>
-          <p className="text-[10px] text-purple-300 mt-0.5 font-mono">Peak: Main Stand (120)</p>
+          <span className="text-xl font-bold text-slate-900 font-mono">{totalQueue} pax</span>
+          <p className="text-[10px] text-purple-700 mt-0.5 font-mono">Peak: Main Stand (120)</p>
         </div>
       </div>
 
-      {/* 4. Predicted Passenger Demand */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 shadow-lg backdrop-blur flex flex-col justify-between">
+      {/* 5. Predicted Passenger Demand */}
+      <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow transition-shadow flex flex-col justify-between">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Predicted 2h Demand</span>
-          <div className="p-1.5 bg-cyan-500/10 rounded-lg text-cyan-400">
+          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">2h Forecast Volume</span>
+          <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
             <TrendingUp className="w-4 h-4" />
           </div>
         </div>
         <div className="mt-2">
-          <span className="text-xl font-bold text-white font-mono">{total2hArrivals} pax</span>
-          <p className="text-[10px] text-cyan-300 mt-0.5 font-mono">MAE: {forecast.evaluation_mae} pax</p>
-        </div>
-      </div>
-
-      {/* 5. Next Surge Prediction */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 shadow-lg backdrop-blur flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Next Demand Surge</span>
-          <div className="p-1.5 bg-amber-500/10 rounded-lg text-amber-400">
-            <Clock className="w-4 h-4" />
-          </div>
-        </div>
-        <div className="mt-2">
-          <span className="text-xs font-bold text-amber-300 font-mono block truncate" title={nextSurgeText}>
-            {nextSurgeText}
-          </span>
-          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
-            {criticalStopsCount} / 4 Stops High Risk
+          <span className="text-xl font-bold text-slate-900 font-mono">{total2hArrivals} pax</span>
+          <p className="text-[10px] text-amber-800 mt-0.5 font-mono truncate" title={nextSurgeText}>
+            MAE: {forecast.evaluation_mae} pax • {nextSurgeText}
           </p>
         </div>
       </div>
 
       {/* 6. Optimization Status & Result State */}
-      <div className={`bg-slate-900/90 border rounded-xl p-3.5 shadow-lg backdrop-blur flex flex-col justify-between ${statusInfo.bg}`}>
+      <div className={`border rounded-xl p-3.5 shadow-sm hover:shadow transition-shadow flex flex-col justify-between ${statusInfo.bg}`}>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Optimizer Status</span>
+          <span className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">OR-Tools Solver</span>
           <div className="p-1.5 rounded-lg">
             {statusInfo.icon}
           </div>
@@ -190,7 +196,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
           <span className={`text-xl font-bold font-mono ${statusInfo.color}`}>
             {statusInfo.label}
           </span>
-          <p className="text-[10px] text-slate-400 mt-0.5 font-mono truncate">
+          <p className="text-[10px] text-slate-600 mt-0.5 font-mono truncate">
             {statusInfo.sub}
           </p>
         </div>

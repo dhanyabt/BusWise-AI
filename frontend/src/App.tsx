@@ -4,6 +4,8 @@ import { Sidebar } from './components/Sidebar';
 import type { TabType } from './components/Sidebar';
 import { MetricCards } from './components/MetricCards';
 import { MapView } from './components/MapView';
+import { LeafletMapView } from './components/LeafletMapView';
+import { GoogleMapView } from './components/GoogleMapView';
 import { ForecastChart } from './components/ForecastChart';
 import { TransferCards } from './components/TransferCards';
 import { FleetTimeline } from './components/FleetTimeline';
@@ -14,8 +16,12 @@ import { TimeToSurgeView } from './components/TimeToSurgeView';
 import { WhatIfSimulator } from './components/WhatIfSimulator';
 import { PassengerView } from './components/PassengerView';
 import { AllocationTable } from './components/AllocationTable';
-import { DemoWorkflowStepper } from './components/DemoWorkflowStepper';
 import { AllocationComparison } from './components/AllocationComparison';
+import { AuthModal } from './components/AuthModal';
+import type { UserSession } from './components/AuthModal';
+import { TripPlanner } from './components/TripPlanner';
+import { AIExplainabilityCard } from './components/AIExplainabilityCard';
+import { DashboardGrid } from './components/DashboardGrid';
 
 import {
   fetchHealthStatus,
@@ -45,6 +51,29 @@ import {
 } from './data/demoData';
 
 export const App: React.FC = () => {
+  // User Authentication & Session State (Persisted in localStorage)
+  const [session, setSession] = useState<UserSession>(() => {
+    try {
+      const saved = localStorage.getItem('buswise_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.token && parsed.role) return parsed;
+      }
+    } catch {
+      // Fallback to default operator
+    }
+    return {
+      id: 'usr-002',
+      name: 'Cmdr. Sarah Vance',
+      email: 'officer@buswise.ai',
+      role: 'OFFICER',
+      agency: 'Tamil Nadu State Transport Corporation',
+      badge_number: 'TNSTC-8092',
+      token: 'token-officer-67890',
+    };
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   // API & System State
   const [apiStatus, setApiStatus] = useState({ healthy: false, message: 'Initializing...', is_demo: true });
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -52,8 +81,12 @@ export const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Guided Demonstration Workflow Step
-  const [demoStep, setDemoStep] = useState<number>(1);
+  // Map Engine Mode (Google Maps vs Leaflet OSM vs Schematic Canvas)
+  const [mapMode, setMapMode] = useState<'GOOGLE' | 'GEOSPATIAL' | 'SCHEMATIC'>('GOOGLE');
+
+  // Passenger Selected Route
+  const [selectedRouteOrigin, setSelectedRouteOrigin] = useState<string>('STOP-001');
+  const [selectedRouteDest, setSelectedRouteDest] = useState<string>('STOP-003');
 
   // Core Data States
   const [stops, setStops] = useState<BusStop[]>(DEMO_STOPS_DATA);
@@ -72,8 +105,8 @@ export const App: React.FC = () => {
     weight_transfer: 5.0,
   });
 
-  // Active View Tab
-  const [activeTab, setActiveTab] = useState<TabType>('OVERVIEW');
+  // Active View Tab (Defaults to compact government-grade DASHBOARD)
+  const [activeTab, setActiveTab] = useState<TabType>('DASHBOARD');
 
   // Load Initial System Data
   const loadSystemData = async () => {
@@ -86,7 +119,7 @@ export const App: React.FC = () => {
         fetchBusStops(),
         fetchFleetSummary(),
         fetchForecasts(scenarioParams.scenario_name, scenarioParams.demand_multiplier),
-        runOptimization(scenarioParams),
+        runOptimization(scenarioParams, session.token),
       ]);
 
       setStops(stopsRes.stops);
@@ -118,45 +151,14 @@ export const App: React.FC = () => {
     try {
       const [forecastRes, optRes] = await Promise.all([
         fetchForecasts(scenarioParams.scenario_name, scenarioParams.demand_multiplier),
-        runOptimization(scenarioParams),
+        runOptimization(scenarioParams, session.token),
       ]);
       setForecast(forecastRes);
       setOptimization(optRes);
-      setDemoStep(5);
     } catch (err) {
       console.error('Optimization run failed', err);
     } finally {
       setIsOptimizing(false);
-    }
-  };
-
-  // Step Select Handler
-  const handleSelectDemoStep = (step: number) => {
-    setDemoStep(step);
-    switch (step) {
-      case 1:
-        setActiveTab('OVERVIEW');
-        break;
-      case 2:
-        setActiveTab('FORECAST');
-        break;
-      case 3:
-        setActiveTab('FORECAST');
-        break;
-      case 4:
-        handleRunOptimization();
-        break;
-      case 5:
-        setActiveTab('RIPPLEGUARD');
-        break;
-      case 6:
-        setActiveTab('ALLOCATION');
-        break;
-      case 7:
-        setActiveTab('ALLOCATION');
-        break;
-      default:
-        setActiveTab('OVERVIEW');
     }
   };
 
@@ -167,15 +169,15 @@ export const App: React.FC = () => {
       transfers: prev.transfers.map((t) =>
         t.id === transferId
           ? {
-              ...t,
-              approval_status: 'APPROVED',
-              approved_by: operatorId,
-              approved_at: new Date().toISOString(),
-            }
+            ...t,
+            approval_status: 'APPROVED',
+            approved_by: operatorId,
+            approved_at: new Date().toISOString(),
+          }
           : t
       ),
     }));
-    await approveTransfer(transferId, operatorId);
+    await approveTransfer(transferId, operatorId, session.token);
   };
 
   // Operator Transfer Reject Action
@@ -185,24 +187,32 @@ export const App: React.FC = () => {
       transfers: prev.transfers.map((t) =>
         t.id === transferId
           ? {
-              ...t,
-              approval_status: 'REJECTED',
-              approved_by: operatorId,
-              approved_at: new Date().toISOString(),
-            }
+            ...t,
+            approval_status: 'REJECTED',
+            approved_by: operatorId,
+            approved_at: new Date().toISOString(),
+          }
           : t
       ),
     }));
-    await rejectTransfer(transferId, operatorId);
+    await rejectTransfer(transferId, operatorId, session.token);
   };
 
   // What-If Simulation Runner
   const handleRunWhatIfSimulation = async (simParams: ScenarioParams): Promise<OptimizationResponse> => {
-    return await runOptimization(simParams);
+    return await runOptimization(simParams, session.token);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white flex flex-row w-full overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-pink-500 selection:text-white flex flex-row w-full overflow-x-hidden">
+      {/* Auth Modal for Role Selection */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(newSession) => setSession(newSession)}
+        currentRole={session.role}
+      />
+
       {/* Control Room Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -212,6 +222,8 @@ export const App: React.FC = () => {
         transferCount={optimization.transfers.length}
         isMobileOpen={isMobileMenuOpen}
         setIsMobileOpen={setIsMobileMenuOpen}
+        session={session}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
       />
 
       {/* Main Workspace Area */}
@@ -222,80 +234,120 @@ export const App: React.FC = () => {
           onRefresh={loadSystemData}
           isRefreshing={isRefreshing}
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          session={session}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
         />
 
-        {/* Dashboard Content */}
-        <main className="p-4 md:p-6 space-y-6 flex-1 w-full max-w-[1600px] mx-auto">
-          {/* Interactive Demonstration Stepper */}
-          <DemoWorkflowStepper
-            currentStep={demoStep}
-            onSelectStep={handleSelectDemoStep}
-            onRunOptimization={handleRunOptimization}
-            isOptimizing={isOptimizing}
-          />
+        {/* Main Workspace Content */}
+        <main className="p-4 md:p-6 space-y-5 flex-1 w-full max-w-[1600px] mx-auto">
+          {/* TAB 1: COMPACT GOVERNMENT-GRADE DASHBOARD (Central Grid of Clickable Feature Cards) */}
+          {activeTab === 'DASHBOARD' && (
+            <DashboardGrid
+              fleet={fleet}
+              forecast={forecast}
+              optimization={optimization}
+              session={session}
+              onNavigate={setActiveTab}
+              isOptimizing={isOptimizing}
+              onRunOptimization={handleRunOptimization}
+            />
+          )}
 
-          {/* Responsive 6-Card Operations Summary Metric Grid */}
-          <MetricCards
-            fleet={fleet}
-            forecast={forecast}
-            optimization={optimization}
-            isOptimizing={isOptimizing}
-          />
+          {/* TAB 2: LIVE MAP & TAMIL NADU GIS INTEGRATION */}
+          {activeTab === 'MAP' && (
+            <div className="space-y-4">
+              {/* Map Engine Mode Switcher */}
+              <div className="flex flex-wrap items-center justify-between bg-white border border-slate-200/90 p-3 rounded-xl shadow-2xs font-mono text-xs">
+                <span className="text-slate-800 font-bold">Select Map Display Engine:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setMapMode('GOOGLE')}
+                    className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
+                      mapMode === 'GOOGLE'
+                        ? 'bg-pink-600 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Google Maps Platform (TN Corridor)
+                  </button>
+                  <button
+                    onClick={() => setMapMode('GEOSPATIAL')}
+                    className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
+                      mapMode === 'GEOSPATIAL'
+                        ? 'bg-pink-600 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    OpenStreetMap GIS + GPS
+                  </button>
+                  <button
+                    onClick={() => setMapMode('SCHEMATIC')}
+                    className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
+                      mapMode === 'SCHEMATIC'
+                        ? 'bg-pink-600 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Schematic Topology Canvas
+                  </button>
+                </div>
+              </div>
 
-          {/* TAB 1: OVERVIEW (Master Control Operations) */}
-          {activeTab === 'OVERVIEW' && (
+              {mapMode === 'GOOGLE' ? (
+                <GoogleMapView
+                  stops={stops}
+                  fleet={fleet}
+                  transfers={optimization.transfers}
+                  forecast={forecast}
+                  selectedOriginId={selectedRouteOrigin}
+                  selectedDestinationId={selectedRouteDest}
+                  onSelectRoute={(o, d) => {
+                    setSelectedRouteOrigin(o);
+                    setSelectedRouteDest(d);
+                  }}
+                  userRole={session.role}
+                />
+              ) : mapMode === 'GEOSPATIAL' ? (
+                <LeafletMapView
+                  stops={stops}
+                  fleet={fleet}
+                  transfers={optimization.transfers}
+                  forecast={forecast}
+                  selectedOriginId={selectedRouteOrigin}
+                  selectedDestinationId={selectedRouteDest}
+                  userRole={session.role}
+                />
+              ) : (
+                <MapView
+                  stops={stops}
+                  fleet={fleet}
+                  transfers={optimization.transfers}
+                  forecast={forecast}
+                />
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: FLEET & ROUTES */}
+          {activeTab === 'FLEET' && (
             <div className="space-y-6">
-              {/* Scenario & Solver Controls */}
-              <ScenarioControls
-                params={scenarioParams}
-                onChange={setScenarioParams}
-                onRunOptimization={handleRunOptimization}
+              <MetricCards
+                fleet={fleet}
+                forecast={forecast}
+                optimization={optimization}
                 isOptimizing={isOptimizing}
               />
-
-              {/* Before vs After Bus Allocation Comparison */}
-              <AllocationComparison
-                stops={stops}
-                fleet={fleet}
-                optimization={optimization}
-              />
-
-              {/* 4-Stop Map & Bus Allocations */}
-              <MapView
-                stops={stops}
-                fleet={fleet}
-                transfers={optimization.transfers}
-                forecast={forecast}
-              />
-
-              {/* Bus Allocation & Crowd-Risk Table */}
+              <FleetTimeline optimization={optimization} />
               <AllocationTable
                 stops={stops}
                 fleet={fleet}
                 forecast={forecast}
                 optimization={optimization}
               />
-
-              {/* Transfer Recommendations */}
-              <TransferCards transfers={optimization.transfers} />
             </div>
           )}
 
-          {/* TAB 2: LIVE MAP / FLEET VIEW */}
-          {activeTab === 'MAP' && (
-            <div className="space-y-6">
-              <MapView
-                stops={stops}
-                fleet={fleet}
-                transfers={optimization.transfers}
-                forecast={forecast}
-              />
-              <TransferCards transfers={optimization.transfers} />
-              <FleetTimeline optimization={optimization} />
-            </div>
-          )}
-
-          {/* TAB 3: DEMAND FORECAST */}
+          {/* TAB 4: DEMAND FORECAST */}
           {activeTab === 'FORECAST' && (
             <div className="space-y-6">
               <ForecastChart forecast={forecast} />
@@ -306,21 +358,27 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: BUS ALLOCATION */}
-          {activeTab === 'ALLOCATION' && (
+          {/* TAB 5: AI OPTIMIZER (OR-TOOLS) */}
+          {activeTab === 'OPTIMIZER' && (
             <div className="space-y-6">
+              {/* Operational Risk Summary & Generative AI Trade-Off Explanation (Single view only) */}
+              <AIExplainabilityCard forecast={forecast} optimization={optimization} />
+
               <AllocationComparison
                 stops={stops}
                 fleet={fleet}
                 optimization={optimization}
               />
+
+              <TransferCards transfers={optimization.transfers} />
+
               <AllocationTable
                 stops={stops}
                 fleet={fleet}
                 forecast={forecast}
                 optimization={optimization}
               />
-              <FleetTimeline optimization={optimization} />
+
               <ConstraintAudits
                 validation={optimization.constraint_validation}
                 solverName={optimization.solver_name}
@@ -329,7 +387,7 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 5: WHAT-IF SIMULATOR */}
+          {/* TAB 6: WHAT-IF SIMULATOR */}
           {activeTab === 'SIMULATOR' && (
             <div className="space-y-6">
               <ScenarioControls
@@ -345,14 +403,33 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 6: RIPPLEGUARD TRANSFER LEDGER */}
-          {activeTab === 'RIPPLEGUARD' && (
+          {/* TAB 7: TRIP PLANNER & TRIP TRACKER */}
+          {activeTab === 'TRIP_PLANNER' && (
+            <div className="space-y-6">
+              <TripPlanner
+                stops={stops}
+                forecast={forecast}
+                onSelectRoute={(o, d) => {
+                  setSelectedRouteOrigin(o);
+                  setSelectedRouteDest(d);
+                }}
+              />
+              <PassengerView stops={stops} forecast={forecast} />
+            </div>
+          )}
+
+          {/* TAB 8: ALERTS & REPORTS */}
+          {activeTab === 'ALERTS_REPORTS' && (
             <div className="space-y-6">
               <RippleGuardLedger
                 transfers={optimization.transfers}
                 scenarioName={scenarioParams.scenario_name}
                 onApprove={handleApproveTransfer}
                 onReject={handleRejectTransfer}
+              />
+              <TimeToSurgeView
+                scenarioName={scenarioParams.scenario_name}
+                demandMultiplier={scenarioParams.demand_multiplier}
               />
               <ConstraintAudits
                 validation={optimization.constraint_validation}
@@ -361,19 +438,12 @@ export const App: React.FC = () => {
               />
             </div>
           )}
-
-          {/* TAB 7: PASSENGER PORTAL */}
-          {activeTab === 'PASSENGER' && (
-            <div className="space-y-6">
-              <PassengerView stops={stops} forecast={forecast} />
-            </div>
-          )}
         </main>
 
         {/* Control Room Footer */}
-        <footer className="border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500 font-mono">
+        <footer className="border-t border-slate-200 bg-white/80 py-4 px-6 text-center text-xs text-slate-500 font-mono">
           <p>
-            BusWise AI Transport Control Center • Fixed Fleet of 16 Buses • Google OR-Tools CBC MILP Solver • DEMO DATA — NOT LIVE
+            BusWise AI Public Transport Control • Active Role: {session.role} ({session.name}) • Fixed Fleet of 16 Buses • Google OR-Tools CBC Solver • DEMO DATA — NOT LIVE
           </p>
         </footer>
       </div>

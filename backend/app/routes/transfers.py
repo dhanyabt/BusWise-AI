@@ -1,22 +1,27 @@
+from typing import Optional
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Path, Query
+from fastapi import APIRouter, HTTPException, Path, Query, Header
 from backend.app.schemas.optimization import TransferCard, ApprovalRequest
 from backend.app.schemas.time_to_surge import TimeToSurgeResponse
 from backend.app.services.time_to_surge import time_to_surge_service
 from backend.app.services.optimizer import optimizer_service
 from backend.app.routes.optimize import runs_cache
+from backend.app.routes.auth import verify_role_permission
 
 router = APIRouter(tags=["Transfers & Workflow"])
 
 @router.post("/transfers/{transfer_id}/approve", response_model=TransferCard)
 def approve_transfer(
     transfer_id: str = Path(..., description="ID of transfer recommendation to approve"),
-    request: ApprovalRequest = ApprovalRequest()
+    request: ApprovalRequest = ApprovalRequest(),
+    authorization: Optional[str] = Header(None)
 ):
     """
     Approve an OR-Tools bus transfer recommendation.
     Records operator decision & timestamp without physically generating extra buses.
+    Requires Transport Officer or Police/Safety authorization.
     """
+    verify_role_permission(authorization, ["OFFICER", "POLICE"])
     for run_id, run_data in runs_cache.items():
         for t in run_data.get("transfers", []):
             if t["id"] == transfer_id:
@@ -39,11 +44,14 @@ def approve_transfer(
 @router.post("/transfers/{transfer_id}/reject", response_model=TransferCard)
 def reject_transfer(
     transfer_id: str = Path(..., description="ID of transfer recommendation to reject"),
-    request: ApprovalRequest = ApprovalRequest()
+    request: ApprovalRequest = ApprovalRequest(),
+    authorization: Optional[str] = Header(None)
 ):
     """
     Reject an OR-Tools bus transfer recommendation.
+    Requires Transport Officer or Police/Safety authorization.
     """
+    verify_role_permission(authorization, ["OFFICER", "POLICE"])
     for run_id, run_data in runs_cache.items():
         for t in run_data.get("transfers", []):
             if t["id"] == transfer_id:

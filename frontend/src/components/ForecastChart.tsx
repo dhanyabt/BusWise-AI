@@ -43,10 +43,10 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
   });
 
   const stopColors: Record<string, string> = {
-    'Main Stand': '#818cf8',      // Indigo
-    'Temple Road': '#38bdf8',     // Sky Blue
-    'Railway Station': '#c084fc', // Purple
-    'Market Road': '#34d399',     // Emerald
+    'Main Stand': '#db2777',      // Pink/Magenta
+    'Temple Road': '#0284c7',     // Sky Blue
+    'Railway Station': '#7c3aed', // Purple
+    'Market Road': '#059669',     // Emerald
   };
 
   // Check if any interval exceeds surge threshold (>150 pax)
@@ -55,18 +55,18 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
   );
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-2xl backdrop-blur mb-6">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
       {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-200">
         <div>
           <div className="flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5 text-indigo-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">2-Hour Passenger Demand Forecast</h2>
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-mono">
+            <TrendingUp className="w-5 h-5 text-pink-600" />
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">2-Hour Passenger Demand Forecast</h2>
+            <span className="text-[10px] bg-pink-50 text-pink-700 border border-pink-200 px-2 py-0.5 rounded font-mono font-bold">
               15-Min Intervals
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Predicted passenger arrival rates across 4 festival stops over the 2-hour planning horizon (T0..T7).
           </p>
         </div>
@@ -74,11 +74,11 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
         {/* Model Evaluation Metric & Filter */}
         <div className="flex flex-wrap items-center gap-3 text-xs">
           {/* MAE Metric Badge */}
-          <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 flex items-center space-x-2 text-slate-200 font-mono">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 flex items-center space-x-2 text-emerald-800 font-mono">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <div>
-              <span className="text-[10px] text-slate-400 block leading-tight">EVALUATION MAE</span>
-              <span className="font-bold text-white leading-tight">{forecast.evaluation_mae} pax</span>
+              <span className="text-[10px] text-emerald-700 block leading-tight font-medium">EVALUATION MAE</span>
+              <span className="font-bold text-emerald-950 leading-tight">{forecast.evaluation_mae} pax</span>
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
           <select
             value={selectedStopId}
             onChange={(e) => setSelectedStopId(e.target.value)}
-            className="bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono cursor-pointer"
+            className="bg-slate-50 border border-slate-200 text-slate-800 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500 text-xs font-mono cursor-pointer"
             aria-label="Filter forecast by stop"
           >
             <option value="ALL">All 4 Bus Stops</option>
@@ -101,8 +101,8 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
 
       {/* Surge Threshold Alert Banner */}
       {maxArrival >= 150 && (
-        <div className="mt-4 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center space-x-2 font-mono">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className="mt-4 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center space-x-2 font-mono">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
           <span>
             Critical Surge Detected: Peak interval arrivals reach {maxArrival} pax/15m. Fixed fleet redistribution recommended.
           </span>
@@ -116,33 +116,34 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
             <defs>
               {Object.entries(stopColors).map(([name, color]) => (
                 <linearGradient key={name} id={`grad-${name.replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.5} />
+                  <stop offset="5%" stopColor={color} stopOpacity={0.4} />
                   <stop offset="95%" stopColor={color} stopOpacity={0.0} />
                 </linearGradient>
               ))}
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-            <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} tickLine={false} />
-            <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} unit=" pax" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" opacity={1} />
+            <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} tickLine={false} tick={{ fill: '#64748b' }} />
+            <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tick={{ fill: '#64748b' }} unit=" pax" />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#0f172a',
-                borderColor: '#334155',
+                backgroundColor: '#ffffff',
+                borderColor: '#e2e8f0',
                 borderRadius: '0.75rem',
-                color: '#f8fafc',
+                color: '#0f172a',
                 fontSize: '12px',
                 fontFamily: 'monospace',
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
               }}
             />
             <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px', fontFamily: 'monospace' }} />
 
             {/* High Surge Reference Line */}
-            <ReferenceLine y={150} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Surge Threshold (150 pax)', fill: '#f59e0b', fontSize: 10, position: 'top' }} />
+            <ReferenceLine y={150} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Surge Threshold (150 pax)', fill: '#d97706', fontSize: 10, position: 'top' }} />
 
             {forecast.stops_forecast.map((sf) => {
               if (selectedStopId !== 'ALL' && selectedStopId !== sf.stop_id) return null;
-              const color = stopColors[sf.stop_name] || '#818cf8';
+              const color = stopColors[sf.stop_name] || '#db2777';
               return (
                 <Area
                   key={sf.stop_id}
@@ -160,13 +161,13 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
       </div>
 
       {/* Forecast Peak Summary Table */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 border-t border-slate-800 pt-4 text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 border-t border-slate-200 pt-4 text-xs">
         {forecast.stops_forecast.map((sf) => (
-          <div key={sf.stop_id} className="bg-slate-950/60 border border-slate-800 p-2.5 rounded-lg">
-            <span className="text-slate-400 font-mono text-[10px] uppercase block">{sf.stop_name}</span>
+          <div key={sf.stop_id} className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg">
+            <span className="text-slate-500 font-mono text-[10px] uppercase block">{sf.stop_name}</span>
             <div className="flex items-baseline justify-between mt-1">
-              <span className="font-bold text-white font-mono">{sf.total_2h_arrivals} pax</span>
-              <span className="text-[10px] text-indigo-300 font-mono">Peak T+{sf.peak_interval_index * 15}m</span>
+              <span className="font-bold text-slate-900 font-mono">{sf.total_2h_arrivals} pax</span>
+              <span className="text-[10px] text-pink-700 font-mono font-bold">Peak T+{sf.peak_interval_index * 15}m</span>
             </div>
           </div>
         ))}

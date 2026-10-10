@@ -18,46 +18,46 @@ from typing import Dict, List, Any
 PLANNING_INTERVALS = 8
 INTERVAL_MINUTES = 15
 
-# 1. 4 Fictional Bus Stops
+# 1. 4 Fictional Bus Stops (Tamil Nadu Transit Hubs)
 DEMO_STOPS: List[Dict[str, Any]] = [
     {
         "id": "STOP-001",
-        "name": "Main Stand",
-        "location_lat": 12.9716,
-        "location_lng": 77.5946,
+        "name": "CMBT Koyambedu",
+        "location_lat": 13.0694,
+        "location_lng": 80.1948,
         "capacity": 800,
         "minimum_service_level": 2,
-        "description": "Primary festival stage exit & transport hub - High crowd density",
+        "description": "Primary festival stage exit & transit terminal (CMBT Chennai) - High crowd density",
         "initial_queue": 120,
     },
     {
         "id": "STOP-002",
-        "name": "Temple Road",
-        "location_lat": 12.9780,
-        "location_lng": 77.6000,
+        "name": "Mylapore Temple Rd",
+        "location_lat": 13.0334,
+        "location_lng": 80.2699,
         "capacity": 400,
         "minimum_service_level": 1,
-        "description": "North exit route near cultural area - Moderate steady flow",
+        "description": "Cultural district & festival temple precinct exit - Moderate steady flow",
         "initial_queue": 45,
     },
     {
         "id": "STOP-003",
-        "name": "Railway Station",
-        "location_lat": 12.9650,
-        "location_lng": 77.5800,
+        "name": "Chennai Central Rail",
+        "location_lat": 13.0827,
+        "location_lng": 80.2707,
         "capacity": 600,
         "minimum_service_level": 2,
-        "description": "Main intercity transit connector - Peak arrivals at festival end",
+        "description": "Intercity rail & metropolitan bus interchange - Peak arrivals at festival surge",
         "initial_queue": 30,
     },
     {
         "id": "STOP-004",
-        "name": "Market Road",
-        "location_lat": 12.9850,
-        "location_lng": 77.5900,
+        "name": "T. Nagar Market Rd",
+        "location_lat": 13.0418,
+        "location_lng": 80.2341,
         "capacity": 350,
         "minimum_service_level": 1,
-        "description": "Commercial district feeder stop - Secondary pickup point",
+        "description": "Commercial feeder hub & shopping precinct - Secondary festival pickup point",
         "initial_queue": 20,
     },
 ]

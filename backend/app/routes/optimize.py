@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Path
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Path, Header
 from backend.app.schemas.optimization import OptimizationRequest, OptimizationResponse, TransferCard
 from backend.app.services.optimizer import optimizer_service
 from backend.app.services.database import db_service
+from backend.app.routes.auth import verify_role_permission
 
 router = APIRouter(tags=["Optimization"])
 
@@ -9,11 +11,16 @@ router = APIRouter(tags=["Optimization"])
 runs_cache: dict[str, dict] = {}
 
 @router.post("/optimize", response_model=OptimizationResponse)
-def run_optimization(request: OptimizationRequest):
+def run_optimization(
+    request: OptimizationRequest,
+    authorization: Optional[str] = Header(None)
+):
     """
     Run Google OR-Tools fixed-fleet redistribution solver.
     Returns optimal bus transfer recommendations and stop queue timelines.
+    Enforces that only Transport Officers and Police/Safety personnel can run fleet optimization.
     """
+    verify_role_permission(authorization, ["OFFICER", "POLICE"])
     w_queue = request.weights.weight_queue if request.weights else 10.0
     w_unmet = request.weights.weight_unmet if request.weights else 100.0
     w_transfer = request.weights.weight_transfer if request.weights else 5.0

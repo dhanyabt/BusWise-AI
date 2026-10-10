@@ -104,3 +104,11 @@ INSERT INTO demand_forecasts (stop_id, interval_index, interval_time, arrival_co
 ('STOP-004', 6, NOW() + INTERVAL '90 min', 30, 'baseline'),
 ('STOP-004', 7, NOW() + INTERVAL '105 min', 20, 'baseline')
 ON CONFLICT (stop_id, interval_index, scenario) DO UPDATE SET arrival_count = EXCLUDED.arrival_count;
+
+-- 6. Seed Standard Multi-Role Users
+INSERT INTO users (id, name, email, password_hash, salt, role, agency, badge_number, token) VALUES
+('usr-001', 'Alex Morgan (Attendee)', 'passenger@buswise.ai', '4314757c9ecda894c2ad2c3589b35b6c3104c4416a2ef69d7a2fa26588a4bf57', 'e1b4f2c9085d4e138a34293f01b7a2d8', 'PASSENGER', 'Public Transit Rider', NULL, 'token-passenger-12345'),
+('usr-002', 'Cmdr. Sarah Vance', 'officer@buswise.ai', '4314757c9ecda894c2ad2c3589b35b6c3104c4416a2ef69d7a2fa26588a4bf57', 'e1b4f2c9085d4e138a34293f01b7a2d8', 'OFFICER', 'Department of Public Transport', 'DPT-8092', 'token-officer-67890'),
+('usr-003', 'Capt. James Miller', 'police@buswise.ai', '4314757c9ecda894c2ad2c3589b35b6c3104c4416a2ef69d7a2fa26588a4bf57', 'e1b4f2c9085d4e138a34293f01b7a2d8', 'POLICE', 'Festival Crowd Safety & Police Dispatch', 'PD-4412', 'token-police-13579')
+ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, role = EXCLUDED.role, token = EXCLUDED.token;
+

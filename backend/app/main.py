@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.config import settings
-from backend.app.routes import health, stops, fleet, forecasts, scenarios, optimize, transfers
+from backend.app.routes import health, stops, fleet, forecasts, scenarios, optimize, transfers, auth
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -28,6 +28,7 @@ app.include_router(forecasts.router, prefix=settings.API_PREFIX)
 app.include_router(scenarios.router, prefix=settings.API_PREFIX)
 app.include_router(optimize.router, prefix=settings.API_PREFIX)
 app.include_router(transfers.router, prefix=settings.API_PREFIX)
+app.include_router(auth.router, prefix=settings.API_PREFIX)
 
 @app.get("/")
 def root_redirect():

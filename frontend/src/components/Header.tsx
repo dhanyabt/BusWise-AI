@@ -1,11 +1,14 @@
 import React from 'react';
-import { Cpu, Database, RefreshCw, Activity, AlertTriangle, Menu } from 'lucide-react';
+import { Database, RefreshCw, Activity, AlertTriangle, Menu, UserCheck } from 'lucide-react';
+import type { UserSession } from './AuthModal';
 
 interface HeaderProps {
   apiStatus: { healthy: boolean; message: string; is_demo: boolean };
   onRefresh: () => void;
   isRefreshing: boolean;
   onToggleMobileMenu?: () => void;
+  session?: UserSession;
+  onOpenAuthModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,17 +16,20 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   isRefreshing,
   onToggleMobileMenu,
+  session,
+  onOpenAuthModal,
 }) => {
+  const roleLabel = session?.role || 'OFFICER';
+
   return (
-    <header className="bg-slate-900 border-b border-slate-800 text-slate-100 py-3 px-4 sm:px-6 shadow-xl sticky top-0 z-30 backdrop-blur-md bg-slate-900/95">
+    <header className="bg-white/95 border-b border-slate-200 text-slate-800 py-3 px-4 sm:px-6 shadow-sm sticky top-0 z-30 backdrop-blur-md">
       <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Title and Branding */}
         <div className="flex items-center space-x-3">
-          {/* Mobile Menu Hamburger Button */}
           {onToggleMobileMenu && (
             <button
               onClick={onToggleMobileMenu}
-              className="md:hidden p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              className="md:hidden p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
               aria-label="Open Navigation Menu"
             >
               <Menu className="w-5 h-5" />
@@ -32,64 +38,70 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">
-                BusWise AI <span className="text-slate-400 font-normal text-sm sm:text-base">| Transport Control Center</span>
+              <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-tight">
+                BusWise AI <span className="text-slate-500 font-normal text-sm sm:text-base">| Public Transport Control</span>
               </h1>
-              <span className="hidden sm:inline-block text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded font-mono">
-                Fixed Fleet (16)
+              <span className="hidden sm:inline-block text-[10px] font-semibold bg-pink-50 text-pink-700 border border-pink-200 px-2 py-0.5 rounded font-mono">
+                Gov-Grade System
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
-              Festival Crowd Prediction & MILP Redistribution Dashboard
+            <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+              AI Crowd Prediction, Multi-Role Access & Fixed-Fleet Bus Redistribution
             </p>
           </div>
         </div>
 
-        {/* Prominent Demo Warning & Status Badges */}
+        {/* Status Pills & Role Trigger */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {/* Prominent Demo Badge — Always Visible as Requested */}
-          <div className="flex items-center space-x-1.5 bg-amber-500/15 border border-amber-500/40 px-3 py-1 rounded-lg text-amber-300 font-mono font-bold text-[11px] shadow-sm">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+          {/* Prominent Demo Warning */}
+          <div className="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg text-amber-800 font-mono font-bold text-[11px]">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
             <span>DEMO DATA — NOT LIVE</span>
           </div>
 
-          {/* OR-Tools Engine Status */}
-          <div className="hidden lg:flex items-center space-x-1.5 bg-slate-800/80 border border-slate-700/80 rounded-lg px-2.5 py-1 text-slate-300 font-mono text-[11px]">
-            <Cpu className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-            <span>OR-Tools CBC</span>
-          </div>
+          {/* User Role Access Pill */}
+          {onOpenAuthModal && (
+            <button
+              onClick={onOpenAuthModal}
+              className="flex items-center space-x-1.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-700 px-3 py-1 rounded-lg font-mono font-bold text-[11px] transition-all active:scale-95 shadow-sm"
+              title="Click to switch role (Passenger / Officer / Police)"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-pink-600 shrink-0" />
+              <span>ROLE: {roleLabel}</span>
+            </button>
+          )}
 
           {/* Database State */}
           <div
             className={`hidden sm:flex items-center space-x-1.5 border rounded-lg px-2.5 py-1 text-[11px] font-mono ${!apiStatus.is_demo
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                : 'bg-slate-800/80 border-slate-700/80 text-slate-300'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-slate-100 border-slate-200 text-slate-700'
               }`}
           >
-            <Database className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+            <Database className="w-3.5 h-3.5 shrink-0 text-slate-500" />
             <span>{!apiStatus.is_demo ? 'Live DB' : 'Demo Mode'}</span>
           </div>
 
           {/* Backend Connection State */}
           <div
             className={`flex items-center space-x-1.5 border rounded-lg px-2.5 py-1 text-[11px] font-mono ${apiStatus.healthy
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
               }`}
           >
-            <Activity className={`w-3.5 h-3.5 shrink-0 ${apiStatus.healthy ? 'animate-pulse text-emerald-400' : 'text-rose-400'}`} />
-            <span>{apiStatus.healthy ? 'API Connected' : 'Offline (Fallback Active)'}</span>
+            <Activity className={`w-3.5 h-3.5 shrink-0 ${apiStatus.healthy ? 'text-emerald-600' : 'text-rose-600'}`} />
+            <span>{apiStatus.healthy ? 'API Connected' : 'Offline'}</span>
           </div>
 
           {/* Refresh Action Button */}
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg transition-all active:scale-95 disabled:opacity-50"
             title="Refresh System Data"
             aria-label="Refresh Data"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-pink-600' : ''}`} />
           </button>
         </div>
       </div>
