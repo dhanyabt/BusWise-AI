@@ -33,6 +33,11 @@ def run_optimization(
         weight_queue=w_queue,
         weight_unmet=w_unmet,
         weight_transfer=w_transfer,
+        weather_severity=request.weather_severity or "Normal",
+        traffic_delay_mins=request.traffic_delay_mins or 0,
+        road_closure=request.road_closure or "NONE",
+        bus_delay_id=request.bus_delay_id,
+        bus_delay_mins=request.bus_delay_mins or 0,
     )
 
     run_id = result["run_id"]

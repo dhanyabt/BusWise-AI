@@ -1,0 +1,141 @@
+{
+  "mode": "DEMO",
+  "label": "SIMULATED DATA - NOT LIVE",
+  "fleetSize": 16,
+  "busCapacityPerTrip": 60,
+  "intervalMinutes": 15,
+  "stops": [
+    {
+      "id": "STOP-001",
+      "name": "CMBT Koyambedu",
+      "passengersPer15Min": 380,
+      "assignedBuses": 4,
+      "crowdLevel": "Critical"
+    },
+    {
+      "id": "STOP-002",
+      "name": "Mylapore Temple Road",
+      "passengersPer15Min": 100,
+      "assignedBuses": 2,
+      "crowdLevel": "Medium"
+    },
+    {
+      "id": "STOP-003",
+      "name": "Chennai Central Railway Station",
+      "passengersPer15Min": 240,
+      "assignedBuses": 3,
+      "crowdLevel": "High"
+    },
+    {
+      "id": "STOP-004",
+      "name": "T. Nagar Market Road",
+      "passengersPer15Min": 60,
+      "assignedBuses": 7,
+      "crowdLevel": "Low"
+    }
+  ],
+  "buses": [
+    {
+      "id": "B01",
+      "stopId": "STOP-001",
+      "status": "Available"
+    },
+    {
+      "id": "B02",
+      "stopId": "STOP-001",
+      "status": "Available"
+    },
+    {
+      "id": "B03",
+      "stopId": "STOP-001",
+      "status": "Available"
+    },
+    {
+      "id": "B04",
+      "stopId": "STOP-001",
+      "status": "Available"
+    },
+    {
+      "id": "B05",
+      "stopId": "STOP-002",
+      "status": "Available"
+    },
+    {
+      "id": "B06",
+      "stopId": "STOP-002",
+      "status": "Available"
+    },
+    {
+      "id": "B07",
+      "stopId": "STOP-003",
+      "status": "Available"
+    },
+    {
+      "id": "B08",
+      "stopId": "STOP-003",
+      "status": "Available"
+    },
+    {
+      "id": "B09",
+      "stopId": "STOP-003",
+      "status": "Available"
+    },
+    {
+      "id": "B10",
+      "stopId": "STOP-004",
+      "status": "Available"
+    },
+    {
+      "id": "B11",
+      "stopId": "STOP-004",
+      "status": "Available"
+    },
+    {
+      "id": "B12",
+      "stopId": "STOP-004",
+      "status": "Available"
+    },
+    {
+      "id": "B13",
+      "stopId": "STOP-004",
+      "status": "Available"
+    },
+    {
+      "id": "B14",
+      "stopId": "STOP-004",
+      "status": "Available"
+    },
+    {
+      "id": "B15",
+      "stopId": "STOP-004",
+      "status": "Available"
+    },
+    {
+      "id": "B16",
+      "stopId": "STOP-004",
+      "status": "Available"
+    }
+  ],
+  "travelTimesMinutes": {
+    "STOP-001": {
+      "STOP-002": 30,
+      "STOP-003": 15,
+      "STOP-004": 15
+    },
+    "STOP-002": {
+      "STOP-001": 30,
+      "STOP-003": 30,
+      "STOP-004": 15
+    },
+    "STOP-003": {
+      "STOP-001": 15,
+      "STOP-002": 30,
+      "STOP-004": 15
+    },
+    "STOP-004": {
+      "STOP-001": 15,
+      "STOP-002": 15,
+      "STOP-003": 15
+    }
+  }
+}

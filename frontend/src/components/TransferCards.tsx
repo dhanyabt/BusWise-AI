@@ -44,9 +44,9 @@ export const TransferCards: React.FC<TransferCardsProps> = ({ transfers }) => {
               {/* Transfer Vector Badge */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="bg-pink-50 text-pink-700 border border-pink-200 px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center space-x-1">
+                  <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center space-x-1">
                     <Bus className="w-3.5 h-3.5" />
-                    <span>{t.bus_count} BUSES</span>
+                    <span>{t.bus_id || `${t.bus_count} BUSES`}</span>
                   </span>
                   <span className="text-xs text-slate-600 font-mono">
                     Dispatch: <strong className="text-slate-900">{t.dispatch_time_label}</strong>

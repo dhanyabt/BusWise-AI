@@ -115,6 +115,26 @@ class UserDatabaseService:
                 "badge_number": "PD-4412",
                 "token": "token-police-13579",
             },
+            {
+                "id": "usr-004",
+                "name": "Director David Chen",
+                "email": "admin@buswise.ai",
+                "password": "demo123",
+                "role": "ADMINISTRATOR",
+                "agency": "State Transport Secretariat",
+                "badge_number": "ADM-001",
+                "token": "token-admin-99999",
+            },
+            {
+                "id": "usr-005",
+                "name": "Priya Sundaram",
+                "email": "eventmanager@buswise.ai",
+                "password": "demo123",
+                "role": "EVENT_MANAGER",
+                "agency": "Tamil Nadu Festival Committee",
+                "badge_number": "EVT-204",
+                "token": "token-eventmanager-88888",
+            },
         ]
 
         for acc in default_accounts:

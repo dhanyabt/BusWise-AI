@@ -173,9 +173,36 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({ forecast }) => {
         ))}
       </div>
 
-      <div className="mt-3 flex items-center space-x-1.5 text-[11px] text-slate-500 font-mono">
-        <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-        <span>Chronological evaluation over festival demand curve with 15-minute granularity</span>
+      <div className="mt-3 space-y-2 font-mono text-[11px]">
+        {forecast.latest_manual_observation && (
+          <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="bg-indigo-600 text-white font-bold px-2 py-0.5 rounded text-[10px]">
+                Manually reported
+              </span>
+              <span>
+                Latest Ground Count: <strong>{forecast.latest_manual_observation.observed_count.toLocaleString()} pax</strong> ({forecast.latest_manual_observation.location})
+              </span>
+            </div>
+            <div className="text-[10px] text-indigo-700">
+              Reported by {forecast.latest_manual_observation.reported_by} at {new Date(forecast.latest_manual_observation.observed_at).toLocaleTimeString()}
+            </div>
+          </div>
+        )}
+
+        {forecast.weather_forecast_notes && (
+          <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 flex items-start space-x-2">
+            <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-slate-800">Weather Forecasting Influence:</span> {forecast.weather_forecast_notes}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center space-x-1.5 text-slate-500 pt-1">
+          <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span>Chronological evaluation over festival demand curve with 15-minute granularity</span>
+        </div>
       </div>
     </div>
   );

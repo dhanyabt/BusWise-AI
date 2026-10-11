@@ -8,6 +8,8 @@ from backend.app.services.optimizer import optimizer_service
 from backend.app.routes.optimize import runs_cache
 from backend.app.routes.auth import verify_role_permission
 
+from backend.app.services.database import db_service
+
 router = APIRouter(tags=["Transfers & Workflow"])
 
 @router.post("/transfers/{transfer_id}/approve", response_model=TransferCard)
@@ -18,13 +20,37 @@ def approve_transfer(
 ):
     """
     Approve an OR-Tools bus transfer recommendation.
-    Records operator decision & timestamp without physically generating extra buses.
-    Requires Transport Officer or Police/Safety authorization.
+    Enforces feasibility rules: vehicle availability, minimum service level, and route availability.
+    Updates the shared authoritative 16-bus state to TRAVELING.
     """
     verify_role_permission(authorization, ["OFFICER", "POLICE"])
+
+    # Search in active optimization runs cache
     for run_id, run_data in runs_cache.items():
         for t in run_data.get("transfers", []):
             if t["id"] == transfer_id:
+                # 1. Feasibility validation
+                if t.get("is_feasible") is False:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Cannot approve transfer: {t.get('infeasibility_reason', 'Transfer violates constraint rules.')}"
+                    )
+
+                bus_id = t.get("bus_id")
+                # 2. Update bus state in database to TRAVELING
+                if bus_id and "BUS-" in bus_id:
+                    try:
+                        db_service.update_bus(
+                            bus_id=bus_id,
+                            status="TRAVELING",
+                            current_stop_id="",
+                            destination_stop_id=t["destination_stop_id"],
+                            assigned_service=f"TRANSFER-{transfer_id}",
+                            eta_minutes=t.get("travel_time_mins", 15)
+                        )
+                    except Exception:
+                        pass
+
                 t["approval_status"] = "APPROVED"
                 t["approved_at"] = datetime.now(timezone.utc).isoformat()
                 t["approved_by"] = request.operator_id
@@ -34,9 +60,62 @@ def approve_transfer(
     if fresh["transfers"]:
         t = fresh["transfers"][0]
         t["id"] = transfer_id
+        bus_id = t.get("bus_id")
+        if bus_id and "BUS-" in bus_id:
+            try:
+                db_service.update_bus(
+                    bus_id=bus_id,
+                    status="TRAVELING",
+                    current_stop_id="",
+                    destination_stop_id=t["destination_stop_id"],
+                    assigned_service=f"TRANSFER-{transfer_id}",
+                    eta_minutes=t.get("travel_time_mins", 15)
+                )
+            except Exception:
+                pass
+
         t["approval_status"] = "APPROVED"
         t["approved_at"] = datetime.now(timezone.utc).isoformat()
         t["approved_by"] = request.operator_id
+        return TransferCard(**t)
+
+    raise HTTPException(status_code=404, detail=f"Transfer recommendation '{transfer_id}' not found.")
+
+@router.post("/transfers/{transfer_id}/arrive", response_model=TransferCard)
+def arrive_transfer(
+    transfer_id: str = Path(..., description="ID of transfer recommendation to mark arrived"),
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Simulate arrival of bus at destination stop.
+    Updates the shared authoritative 16-bus state to AVAILABLE at destination.
+    """
+    for run_id, run_data in runs_cache.items():
+        for t in run_data.get("transfers", []):
+            if t["id"] == transfer_id:
+                bus_id = t.get("bus_id")
+                dest_stop = t["destination_stop_id"]
+                if bus_id and "BUS-" in bus_id:
+                    try:
+                        db_service.update_bus(
+                            bus_id=bus_id,
+                            status="AVAILABLE",
+                            current_stop_id=dest_stop,
+                            destination_stop_id="",
+                            assigned_service="",
+                            eta_minutes=0
+                        )
+                    except Exception:
+                        pass
+
+                t["approval_status"] = "ARRIVED"
+                return TransferCard(**t)
+
+    fresh = optimizer_service.solve(scenario_name="high_peak", demand_multiplier=1.5)
+    if fresh["transfers"]:
+        t = fresh["transfers"][0]
+        t["id"] = transfer_id
+        t["approval_status"] = "ARRIVED"
         return TransferCard(**t)
 
     raise HTTPException(status_code=404, detail=f"Transfer recommendation '{transfer_id}' not found.")

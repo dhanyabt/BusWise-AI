@@ -10,7 +10,7 @@ Implements a machine-learning forecasting pipeline:
 
 import math
 import random
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 from backend.app.demo_data import DEMO_STOPS, DEMO_FORECAST_ARRIVALS, DEMO_SCENARIOS
 
 class DemandForecaster:
@@ -129,29 +129,71 @@ class DemandForecaster:
             self.model_name = "Analytical Feature Baseline"
             self._is_trained = True
 
-    def get_forecasts(self, scenario_name: str = "baseline", multiplier: float = 1.0) -> Dict[str, Any]:
+    def get_forecasts(
+        self,
+        scenario_name: str = "baseline",
+        multiplier: float = 1.0,
+        event_id: Optional[str] = None,
+        location: Optional[str] = None,
+        use_experimental_weather: bool = False,
+        weather_severity: str = "Normal",
+        stop_crowd_boost: Optional[Dict[str, int]] = None,
+    ) -> Dict[str, Any]:
         """
         Returns 2-hour forecast (8 intervals of 15 minutes) for each of the 4 bus stops.
-        Applies scenario multipliers and returns chronological MAE.
+        Applies scenario multipliers, includes latest ground manual observation, and returns chronological MAE.
         """
+        from backend.app.services.database import db_service
+        from backend.app.services.weather import weather_service
+
         scenario_info = DEMO_SCENARIOS.get(scenario_name, DEMO_SCENARIOS["baseline"])
         effective_multiplier = multiplier * scenario_info.get("demand_multiplier", 1.0)
-        
+
+        # Weather severity adjustment
+        weather_factor = 1.0
+        if weather_severity == "Severe":
+            weather_factor = 1.25
+        elif weather_severity == "Moderate":
+            weather_factor = 1.10
+        effective_multiplier *= weather_factor
+
+        weather_info = None
+        weather_notes = "Standard model: Baseline historical attendance & demand factors. Live weather is displayed for situational awareness only and does NOT alter baseline model predictions."
+
+        if location or event_id:
+            coords = weather_service.find_coordinates_by_name(location or event_id or "madurai")
+            if coords:
+                weather_info = weather_service.get_weather(coords["lat"], coords["lng"], location_name=coords["name"])
+            else:
+                weather_info = weather_service.get_weather(9.9252, 78.1198, location_name="Madurai Hub")
+
+        if use_experimental_weather and weather_info and weather_info.get("status") in ["live", "stale"]:
+            precip = weather_info.get("precipitation_mm") or 0.0
+            cond = (weather_info.get("weather_condition") or "").lower()
+            if precip > 5.0 or "rain" in cond or "thunderstorm" in cond:
+                weather_factor = 1.15  # Rain increases bus demand as walkability drops
+            weather_notes = f"EXPERIMENTAL: Live Open-Meteo weather adjustment ({weather_info.get('weather_condition')}, precip={precip}mm, factor={weather_factor}x) applied. Weather impact model is currently experimental and pending long-term validation."
+            effective_multiplier *= weather_factor
+
+        # Retrieve latest ground manual observation from Database
+        latest_obs = db_service.get_latest_crowd_observation(event_id=event_id, location=location)
+
         stops_forecast = []
         for stop in DEMO_STOPS:
             s_id = stop["id"]
             base_arrivals = DEMO_FORECAST_ARRIVALS.get(s_id, [50] * 8)
-            
+            stop_boost = (stop_crowd_boost or {}).get(s_id, 0)
+
             intervals = []
             total_arrivals = 0
             peak_idx = 0
             max_arr = -1
 
             for idx, base_count in enumerate(base_arrivals):
-                # Apply scenario multiplier
-                scaled_count = int(round(base_count * effective_multiplier))
+                # Apply scenario multiplier + boost
+                scaled_count = int(round(base_count * effective_multiplier)) + stop_boost
                 total_arrivals += scaled_count
-                
+
                 if scaled_count > max_arr:
                     max_arr = scaled_count
                     peak_idx = idx
@@ -184,11 +226,15 @@ class DemandForecaster:
 
         return {
             "scenario": scenario_name,
-            "demand_multiplier": effective_multiplier,
+            "demand_multiplier": round(effective_multiplier, 3),
             "stops_forecast": stops_forecast,
             "evaluation_mae": self.mae,
             "model_type": self.model_name,
-            "is_demo_data": True
+            "is_demo_data": True,
+            "latest_manual_observation": latest_obs,
+            "live_weather": weather_info,
+            "weather_forecast_notes": weather_notes,
+            "is_experimental_weather_applied": use_experimental_weather
         }
 
 forecasting_service = DemandForecaster()

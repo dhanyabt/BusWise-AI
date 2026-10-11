@@ -13,6 +13,11 @@ class OptimizationRequest(BaseModel):
     min_service_level: int = Field(default=1)
     bus_capacity: int = Field(default=60)
     weights: Optional[OptimizationWeights] = Field(default_factory=OptimizationWeights)
+    weather_severity: Optional[str] = Field(default="Normal", description="Normal, Moderate, Severe")
+    traffic_delay_mins: Optional[int] = Field(default=0, description="Additional traffic delay in minutes (0-60)")
+    road_closure: Optional[str] = Field(default="NONE", description="Road closure pair e.g. STOP-001_STOP-004 or NONE")
+    bus_delay_id: Optional[str] = Field(default=None, description="Specific delayed bus ID e.g. BUS-005")
+    bus_delay_mins: Optional[int] = Field(default=0, description="Bus delay in minutes")
 
 class TransferCard(BaseModel):
     id: str
@@ -21,6 +26,7 @@ class TransferCard(BaseModel):
     origin_stop_name: str
     destination_stop_id: str
     destination_stop_name: str
+    bus_id: Optional[str] = Field(default="BUS-014", description="Assigned bus ID")
     bus_count: int
     dispatch_interval: int
     dispatch_time_label: str
@@ -36,9 +42,13 @@ class TransferCard(BaseModel):
     fleet_conservation_status: str = Field(default="VERIFIED", description="VERIFIED: 16 buses conserved")
     forecast_scenario: str = Field(default="baseline")
     remaining_unmet_demand: int = Field(default=0)
+    priority: str = Field(default="HIGH", description="CRITICAL, HIGH, MEDIUM, LOW")
+    travel_time_mins: int = Field(default=15, description="Travel duration in minutes")
+    is_feasible: bool = Field(default=True, description="Whether transfer is feasible under current road/traffic constraints")
+    infeasibility_reason: Optional[str] = Field(default=None, description="Explanation if transfer is blocked by road closure or delay")
 
     # Operator Approval Workflow States
-    approval_status: str = Field(default="RECOMMENDED", description="RECOMMENDED, APPROVED, DISPATCHED, COMPLETED, REJECTED, CANCELLED")
+    approval_status: str = Field(default="RECOMMENDED", description="RECOMMENDED, APPROVED, TRAVELING, ARRIVED, REJECTED, CANCELLED")
     approved_at: Optional[str] = None
     approved_by: Optional[str] = None
 

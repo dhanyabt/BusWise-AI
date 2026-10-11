@@ -54,9 +54,9 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Status Pills & Role Trigger */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {/* Prominent Demo Warning */}
-          <div className="flex items-center space-x-1.5 bg-amber-50 border border-amber-200 px-3 py-1 rounded-lg text-amber-800 font-mono font-bold text-[11px]">
+          <div className="flex items-center space-x-1.5 bg-amber-50 border border-amber-300 px-3 py-1 rounded-lg text-amber-900 font-mono font-bold text-[11px]">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span>DEMO DATA — NOT LIVE</span>
+            <span>DEMO MODE — SIMULATED DATA</span>
           </div>
 
           {/* User Role Access Pill */}

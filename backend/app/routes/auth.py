@@ -90,11 +90,11 @@ def register(request: RegisterRequest):
         )
 
     role_key = request.role.upper()
-    if role_key not in ["PASSENGER", "OFFICER", "POLICE"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role '{request.role}'. Allowed roles: PASSENGER, OFFICER, POLICE.",
-        )
+    if role_key in ["ADMINISTRATOR", "ADMIN", "OFFICER", "TRANSPORT_OFFICER"]:
+        # Prevent self-assignment of elevated admin/officer privileges during public registration
+        role_key = "PASSENGER"
+    elif role_key not in ["PASSENGER", "EVENT_MANAGER", "POLICE"]:
+        role_key = "PASSENGER"
 
     password = request.password or "demo123"
     if len(password) < 4:

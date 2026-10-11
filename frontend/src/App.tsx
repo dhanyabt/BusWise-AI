@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import type { TabType } from './components/Sidebar';
-import { MetricCards } from './components/MetricCards';
 import { MapView } from './components/MapView';
 import { LeafletMapView } from './components/LeafletMapView';
 import { GoogleMapView } from './components/GoogleMapView';
@@ -22,6 +21,9 @@ import type { UserSession } from './components/AuthModal';
 import { TripPlanner } from './components/TripPlanner';
 import { AIExplainabilityCard } from './components/AIExplainabilityCard';
 import { DashboardGrid } from './components/DashboardGrid';
+import { FleetManagementView } from './components/FleetManagementView';
+import { EventManagementView } from './components/EventManagementView';
+import { UserManagementView } from './components/UserManagementView';
 
 import {
   fetchHealthStatus,
@@ -31,6 +33,8 @@ import {
   runOptimization,
   approveTransfer,
   rejectTransfer,
+  arriveTransfer,
+  resetDemoFleet,
 } from './services/api';
 
 import { realtimeService } from './services/realtime';
@@ -60,7 +64,7 @@ export const App: React.FC = () => {
         if (parsed && parsed.token && parsed.role) return parsed;
       }
     } catch {
-      // Fallback to default operator
+      // Fallback
     }
     return {
       id: 'usr-002',
@@ -82,7 +86,7 @@ export const App: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Map Engine Mode (Google Maps vs Leaflet OSM vs Schematic Canvas)
-  const [mapMode, setMapMode] = useState<'GOOGLE' | 'GEOSPATIAL' | 'SCHEMATIC'>('GOOGLE');
+  const [mapMode, setMapMode] = useState<'GOOGLE' | 'GEOSPATIAL' | 'SCHEMATIC'>('GEOSPATIAL');
 
   // Passenger Selected Route
   const [selectedRouteOrigin, setSelectedRouteOrigin] = useState<string>('STOP-001');
@@ -164,38 +168,254 @@ export const App: React.FC = () => {
 
   // Operator Transfer Approval Action
   const handleApproveTransfer = async (transferId: string, operatorId: string) => {
+    // 1. Locate transfer recommendation
+    const targetTransfer = optimization.transfers.find((t) => t.id === transferId);
+    if (!targetTransfer) {
+      throw new Error(`Transfer recommendation '${transferId}' not found.`);
+    }
+
+    const currentStatus = (targetTransfer.approval_status || 'RECOMMENDED').toUpperCase();
+    if (currentStatus !== 'RECOMMENDED') {
+      throw new Error(`Transfer '${transferId}' cannot be approved because its current status is '${currentStatus}'.`);
+    }
+
+    const originStopId = targetTransfer.origin_stop_id;
+    const destStopId = targetTransfer.destination_stop_id;
+    const busCount = targetTransfer.bus_count || 1;
+
+    // 2. Feasibility & Conservation Validation
+    const originStopData = stops.find((s) => s.id === originStopId);
+    const minServiceLevel = originStopData?.minimum_service_level ?? 1;
+
+    const currentOriginDistribution = fleet.distribution_by_stop.find((d) => d.stop_id === originStopId);
+    const originBusCount = currentOriginDistribution ? currentOriginDistribution.bus_count : 0;
+
+    if (originBusCount - busCount < minServiceLevel) {
+      throw new Error(
+        `Feasibility Violation: Approving transfer would reduce available fleet at ${targetTransfer.origin_stop_name} from ${originBusCount} to ${
+          originBusCount - busCount
+        }, violating minimum service requirement of ${minServiceLevel} bus.`
+      );
+    }
+
+    // Check available buses
+    const availableBusesAtOrigin = fleet.buses.filter(
+      (b) => b.status === 'AVAILABLE' && (b.current_stop_id === originStopId || b.initial_stop_id === originStopId || !b.current_stop_id)
+    );
+
+    if (availableBusesAtOrigin.length < busCount && originBusCount < busCount) {
+      throw new Error(
+        `Fleet Error: Only ${availableBusesAtOrigin.length} available buses at ${targetTransfer.origin_stop_name}, but ${busCount} requested.`
+      );
+    }
+
+    // Select buses to dispatch
+    const preferredBus = availableBusesAtOrigin.find((b) => b.id === targetTransfer.bus_id);
+    const busesToDispatch = preferredBus ? [preferredBus.id] : availableBusesAtOrigin.slice(0, busCount).map((b) => b.id);
+
+    // 3. Update Shared Application State (Dispatch / Traveling)
+    // Deduct bus_count from origin stop available count; do NOT add to destination count until arrival.
+    setFleet((prevFleet) => {
+      const updatedDistribution = prevFleet.distribution_by_stop.map((d) => {
+        if (d.stop_id === originStopId) {
+          return { ...d, bus_count: Math.max(0, d.bus_count - busCount) };
+        }
+        return d;
+      });
+
+      const updatedBuses = prevFleet.buses.map((b) => {
+        if (busesToDispatch.includes(b.id)) {
+          return {
+            ...b,
+            status: 'TRAVELING' as const,
+            current_stop_id: undefined,
+            destination_stop_id: destStopId,
+            assigned_service: targetTransfer.id,
+            eta_minutes: targetTransfer.travel_time_mins || 15,
+            route_id: `ROUTE-${originStopId}-${destStopId}`,
+          };
+        }
+        return b;
+      });
+
+      const newAvailableBuses = Math.max(0, prevFleet.available_buses - busCount);
+      const newInServiceBuses = prevFleet.in_service_buses + busCount;
+
+      return {
+        ...prevFleet,
+        available_fleet: newAvailableBuses,
+        available_buses: newAvailableBuses,
+        in_service_buses: newInServiceBuses,
+        distribution_by_stop: updatedDistribution,
+        buses: updatedBuses,
+      };
+    });
+
+    // Update transfer status to TRAVELING
     setOptimization((prev) => ({
       ...prev,
       transfers: prev.transfers.map((t) =>
         t.id === transferId
           ? {
-            ...t,
-            approval_status: 'APPROVED',
-            approved_by: operatorId,
-            approved_at: new Date().toISOString(),
-          }
+              ...t,
+              approval_status: 'TRAVELING',
+              approved_by: operatorId,
+              approved_at: new Date().toISOString(),
+            }
           : t
       ),
     }));
-    await approveTransfer(transferId, operatorId, session.token);
+
+    // 4. API Call if backend endpoint is available
+    try {
+      await approveTransfer(transferId, operatorId, session.token);
+    } catch (err) {
+      console.warn('Backend API notification:', err);
+    }
   };
 
   // Operator Transfer Reject Action
   const handleRejectTransfer = async (transferId: string, operatorId: string) => {
+    const targetTransfer = optimization.transfers.find((t) => t.id === transferId);
+    if (targetTransfer) {
+      const currentStatus = (targetTransfer.approval_status || 'RECOMMENDED').toUpperCase();
+      if (currentStatus !== 'RECOMMENDED') {
+        throw new Error(`Transfer '${transferId}' cannot be rejected because it is currently '${currentStatus}'.`);
+      }
+    }
+
     setOptimization((prev) => ({
       ...prev,
       transfers: prev.transfers.map((t) =>
         t.id === transferId
           ? {
-            ...t,
-            approval_status: 'REJECTED',
-            approved_by: operatorId,
-            approved_at: new Date().toISOString(),
-          }
+              ...t,
+              approval_status: 'REJECTED',
+              approved_by: operatorId,
+              approved_at: new Date().toISOString(),
+            }
           : t
       ),
     }));
-    await rejectTransfer(transferId, operatorId, session.token);
+
+    try {
+      await rejectTransfer(transferId, operatorId, session.token);
+    } catch (err) {
+      console.warn('Backend reject API notification:', err);
+    }
+  };
+
+  // Fast-Forward / Simulated Vehicle Arrival Handler
+  const handleSimulateArrival = async (transferId: string) => {
+    const targetTransfer = optimization.transfers.find((t) => t.id === transferId);
+    if (!targetTransfer) return;
+
+    const destStopId = targetTransfer.destination_stop_id;
+    const busCount = targetTransfer.bus_count || 1;
+
+    // Move bus into destination stop available fleet count upon arrival
+    setFleet((prevFleet) => {
+      const updatedDistribution = prevFleet.distribution_by_stop.map((d) => {
+        if (d.stop_id === destStopId) {
+          return { ...d, bus_count: d.bus_count + busCount };
+        }
+        return d;
+      });
+
+      let convertedCount = 0;
+      const updatedBuses = prevFleet.buses.map((b) => {
+        const isThisTransferBus =
+          b.assigned_service === targetTransfer.id ||
+          b.id === targetTransfer.bus_id ||
+          b.status === 'TRAVELING' ||
+          b.status === 'IN_SERVICE';
+
+        if (isThisTransferBus && convertedCount < busCount) {
+          convertedCount++;
+          return {
+            ...b,
+            status: 'AVAILABLE' as const,
+            current_stop_id: destStopId,
+            destination_stop_id: undefined,
+            assigned_service: undefined,
+            eta_minutes: 0,
+          };
+        }
+        return b;
+      });
+
+      const newAvailable = prevFleet.available_buses + busCount;
+      const newInService = Math.max(0, prevFleet.in_service_buses - busCount);
+
+      return {
+        ...prevFleet,
+        available_fleet: newAvailable,
+        available_buses: newAvailable,
+        in_service_buses: newInService,
+        distribution_by_stop: updatedDistribution,
+        buses: updatedBuses,
+      };
+    });
+
+    setOptimization((prev) => ({
+      ...prev,
+      transfers: prev.transfers.map((t) =>
+        t.id === transferId
+          ? {
+              ...t,
+              approval_status: 'ARRIVED',
+            }
+          : t
+      ),
+    }));
+
+    try {
+      await arriveTransfer(transferId, session.token);
+    } catch (err) {
+      console.warn('Backend arrival API notification:', err);
+    }
+  };
+
+  // Reset Demo handler restoring initial 16-bus baseline state
+  const handleResetDemo = async () => {
+    setIsRefreshing(true);
+    try {
+      await resetDemoFleet();
+    } catch (err) {
+      console.warn('Reset demo backend error', err);
+    }
+
+    const defaultParams: ScenarioParams = {
+      scenario_name: 'normal_day',
+      demand_multiplier: 1.0,
+      min_service_level: 1,
+      bus_capacity: 60,
+      weight_queue: 10.0,
+      weight_unmet: 100.0,
+      weight_transfer: 5.0,
+      weather_severity: 'Normal',
+      traffic_delay_mins: 0,
+      road_closure: 'NONE',
+      bus_delay_id: undefined,
+      bus_delay_mins: 0,
+      stop_crowd_boost: undefined,
+    };
+    setScenarioParams(defaultParams);
+
+    try {
+      const [fleetRes, forecastRes, optRes] = await Promise.all([
+        fetchFleetSummary(),
+        fetchForecasts('normal_day', 1.0),
+        runOptimization(defaultParams, session.token),
+      ]);
+      setFleet(fleetRes);
+      setForecast(forecastRes);
+      setOptimization(optRes);
+    } catch (err) {
+      console.warn('Data reload error after reset', err);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // What-If Simulation Runner
@@ -204,12 +424,15 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-pink-500 selection:text-white flex flex-row w-full overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased selection:bg-indigo-500 selection:text-white flex flex-row w-full overflow-x-hidden">
       {/* Auth Modal for Role Selection */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={(newSession) => setSession(newSession)}
+        onLoginSuccess={(newSession) => {
+          setSession(newSession);
+          localStorage.setItem('buswise_session', JSON.stringify(newSession));
+        }}
         currentRole={session.role}
       />
 
@@ -240,7 +463,7 @@ export const App: React.FC = () => {
 
         {/* Main Workspace Content */}
         <main className="p-4 md:p-6 space-y-5 flex-1 w-full max-w-[1600px] mx-auto">
-          {/* TAB 1: COMPACT GOVERNMENT-GRADE DASHBOARD (Central Grid of Clickable Feature Cards) */}
+          {/* TAB 1: COMPACT GOVERNMENT-GRADE DASHBOARD */}
           {activeTab === 'DASHBOARD' && (
             <DashboardGrid
               fleet={fleet}
@@ -261,30 +484,30 @@ export const App: React.FC = () => {
                 <span className="text-slate-800 font-bold">Select Map Display Engine:</span>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
+                    onClick={() => setMapMode('GEOSPATIAL')}
+                    className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
+                      mapMode === 'GEOSPATIAL'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    OpenStreetMap GIS + ORS + GPS
+                  </button>
+                  <button
                     onClick={() => setMapMode('GOOGLE')}
                     className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
                       mapMode === 'GOOGLE'
-                        ? 'bg-pink-600 text-white shadow-2xs'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
                         : 'bg-slate-100 text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     Google Maps Platform (TN Corridor)
                   </button>
                   <button
-                    onClick={() => setMapMode('GEOSPATIAL')}
-                    className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
-                      mapMode === 'GEOSPATIAL'
-                        ? 'bg-pink-600 text-white shadow-2xs'
-                        : 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    OpenStreetMap GIS + GPS
-                  </button>
-                  <button
                     onClick={() => setMapMode('SCHEMATIC')}
                     className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
                       mapMode === 'SCHEMATIC'
-                        ? 'bg-pink-600 text-white shadow-2xs'
+                        ? 'bg-indigo-600 text-white shadow-2xs'
                         : 'bg-slate-100 text-slate-600 hover:text-slate-900'
                     }`}
                   >
@@ -293,7 +516,17 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {mapMode === 'GOOGLE' ? (
+              {mapMode === 'GEOSPATIAL' ? (
+                <LeafletMapView
+                  stops={stops}
+                  fleet={fleet}
+                  transfers={optimization.transfers}
+                  forecast={forecast}
+                  selectedOriginId={selectedRouteOrigin}
+                  selectedDestinationId={selectedRouteDest}
+                  userRole={session.role}
+                />
+              ) : mapMode === 'GOOGLE' ? (
                 <GoogleMapView
                   stops={stops}
                   fleet={fleet}
@@ -307,16 +540,6 @@ export const App: React.FC = () => {
                   }}
                   userRole={session.role}
                 />
-              ) : mapMode === 'GEOSPATIAL' ? (
-                <LeafletMapView
-                  stops={stops}
-                  fleet={fleet}
-                  transfers={optimization.transfers}
-                  forecast={forecast}
-                  selectedOriginId={selectedRouteOrigin}
-                  selectedDestinationId={selectedRouteDest}
-                  userRole={session.role}
-                />
               ) : (
                 <MapView
                   stops={stops}
@@ -328,57 +551,56 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 3: FLEET & ROUTES */}
+          {/* TAB 3: FLEET MANAGEMENT */}
           {activeTab === 'FLEET' && (
-            <div className="space-y-6">
-              <MetricCards
-                fleet={fleet}
-                forecast={forecast}
-                optimization={optimization}
-                isOptimizing={isOptimizing}
-              />
-              <FleetTimeline optimization={optimization} />
-              <AllocationTable
-                stops={stops}
-                fleet={fleet}
-                forecast={forecast}
-                optimization={optimization}
-              />
-            </div>
+            <FleetManagementView
+              fleet={fleet}
+              session={session}
+              onRefreshFleet={loadSystemData}
+            />
           )}
 
-          {/* TAB 4: DEMAND FORECAST */}
-          {activeTab === 'FORECAST' && (
+          {/* TAB 4: EVENT MANAGEMENT */}
+          {activeTab === 'EVENTS' && (
+            <EventManagementView session={session} />
+          )}
+
+          {/* TAB 5: CROWD RISK */}
+          {activeTab === 'CROWD_RISK' && (
             <div className="space-y-6">
-              <ForecastChart forecast={forecast} />
               <TimeToSurgeView
                 scenarioName={scenarioParams.scenario_name}
                 demandMultiplier={scenarioParams.demand_multiplier}
               />
+              <ForecastChart forecast={forecast} />
             </div>
           )}
 
-          {/* TAB 5: AI OPTIMIZER (OR-TOOLS) */}
+          {/* TAB 6: DEMAND FORECAST */}
+          {activeTab === 'DEMAND_FORECAST' && (
+            <div className="space-y-6">
+              <ForecastChart forecast={forecast} />
+              <FleetTimeline optimization={optimization} />
+            </div>
+          )}
+
+          {/* TAB 7: AI OPTIMIZER (OR-TOOLS) */}
           {activeTab === 'OPTIMIZER' && (
             <div className="space-y-6">
-              {/* Operational Risk Summary & Generative AI Trade-Off Explanation (Single view only) */}
               <AIExplainabilityCard forecast={forecast} optimization={optimization} />
-
               <AllocationComparison
-                stops={stops}
-                fleet={fleet}
-                optimization={optimization}
+                transfers={optimization.transfers}
+                onApprove={handleApproveTransfer}
+                onReject={handleRejectTransfer}
+                onSimulateArrival={handleSimulateArrival}
               />
-
               <TransferCards transfers={optimization.transfers} />
-
               <AllocationTable
                 stops={stops}
                 fleet={fleet}
                 forecast={forecast}
                 optimization={optimization}
               />
-
               <ConstraintAudits
                 validation={optimization.constraint_validation}
                 solverName={optimization.solver_name}
@@ -387,13 +609,14 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 6: WHAT-IF SIMULATOR */}
+          {/* TAB 8: WHAT-IF SIMULATOR */}
           {activeTab === 'SIMULATOR' && (
             <div className="space-y-6">
               <ScenarioControls
                 params={scenarioParams}
                 onChange={setScenarioParams}
                 onRunOptimization={handleRunOptimization}
+                onResetDemo={handleResetDemo}
                 isOptimizing={isOptimizing}
               />
               <WhatIfSimulator
@@ -403,8 +626,35 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 7: TRIP PLANNER & TRIP TRACKER */}
-          {activeTab === 'TRIP_PLANNER' && (
+          {/* TAB 9: ALLOCATION LEDGER */}
+          {activeTab === 'LEDGER' && (
+            <div className="space-y-6">
+              <ScenarioControls
+                params={scenarioParams}
+                onChange={setScenarioParams}
+                onRunOptimization={handleRunOptimization}
+                onResetDemo={handleResetDemo}
+                isOptimizing={isOptimizing}
+              />
+              <RippleGuardLedger
+                transfers={optimization.transfers}
+                scenarioName={scenarioParams.scenario_name}
+                fleet={fleet}
+                stopTimelines={optimization.stop_timelines}
+                onApprove={handleApproveTransfer}
+                onReject={handleRejectTransfer}
+                onSimulateArrival={handleSimulateArrival}
+              />
+              <ConstraintAudits
+                validation={optimization.constraint_validation}
+                solverName={optimization.solver_name}
+                solveDurationMs={optimization.solve_duration_ms}
+              />
+            </div>
+          )}
+
+          {/* TAB 10: PASSENGER PORTAL */}
+          {activeTab === 'PASSENGER' && (
             <div className="space-y-6">
               <TripPlanner
                 stops={stops}
@@ -418,32 +668,16 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 8: ALERTS & REPORTS */}
-          {activeTab === 'ALERTS_REPORTS' && (
-            <div className="space-y-6">
-              <RippleGuardLedger
-                transfers={optimization.transfers}
-                scenarioName={scenarioParams.scenario_name}
-                onApprove={handleApproveTransfer}
-                onReject={handleRejectTransfer}
-              />
-              <TimeToSurgeView
-                scenarioName={scenarioParams.scenario_name}
-                demandMultiplier={scenarioParams.demand_multiplier}
-              />
-              <ConstraintAudits
-                validation={optimization.constraint_validation}
-                solverName={optimization.solver_name}
-                solveDurationMs={optimization.solve_duration_ms}
-              />
-            </div>
+          {/* TAB 11: USER & ROLE MANAGEMENT */}
+          {activeTab === 'USERS' && (
+            <UserManagementView session={session} />
           )}
         </main>
 
         {/* Control Room Footer */}
         <footer className="border-t border-slate-200 bg-white/80 py-4 px-6 text-center text-xs text-slate-500 font-mono">
           <p>
-            BusWise AI Public Transport Control • Active Role: {session.role} ({session.name}) • Fixed Fleet of 16 Buses • Google OR-Tools CBC Solver • DEMO DATA — NOT LIVE
+            BusWise AI Public Transport Control • Active Role: {session.role} ({session.name}) • Dynamic Fleet: {fleet.registered_fleet} Registered ({fleet.available_fleet} Available) • Google OR-Tools CBC Solver
           </p>
         </footer>
       </div>

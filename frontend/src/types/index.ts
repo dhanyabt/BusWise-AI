@@ -15,9 +15,13 @@ export interface Bus {
   id: string;
   bus_number: string;
   capacity: number;
-  status: 'AVAILABLE' | 'IN_SERVICE' | 'MAINTENANCE';
+  status: 'AVAILABLE' | 'IN_SERVICE' | 'TRAVELING' | 'UNAVAILABLE' | 'MAINTENANCE' | 'DEACTIVATED';
   initial_stop_id?: string;
   current_stop_id?: string;
+  destination_stop_id?: string;
+  route_id?: string;
+  assigned_service?: string;
+  eta_minutes?: number;
 }
 
 export interface StopBusCount {
@@ -27,10 +31,15 @@ export interface StopBusCount {
 }
 
 export interface FleetSummary {
+  registered_fleet: number;
+  available_fleet: number;
+  allocated_fleet: number;
+  unallocated_fleet: number;
   total_buses: number;
   available_buses: number;
   in_service_buses: number;
   maintenance_buses: number;
+  deactivated_buses: number;
   distribution_by_stop: StopBusCount[];
   buses: Bus[];
   is_demo_data: boolean;
@@ -59,6 +68,10 @@ export interface ForecastResponse {
   evaluation_mae: number;
   model_type: string;
   is_demo_data: boolean;
+  latest_manual_observation?: CrowdObservation | null;
+  live_weather?: WeatherData | null;
+  weather_forecast_notes?: string;
+  is_experimental_weather_applied?: boolean;
 }
 
 export interface TransferCard {
@@ -68,6 +81,7 @@ export interface TransferCard {
   origin_stop_name: string;
   destination_stop_id: string;
   destination_stop_name: string;
+  bus_id?: string;
   bus_count: number;
   dispatch_interval: number;
   dispatch_time_label: string;
@@ -84,6 +98,10 @@ export interface TransferCard {
   approval_status?: string;
   approved_at?: string;
   approved_by?: string;
+  priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  travel_time_mins?: number;
+  is_feasible?: boolean;
+  infeasibility_reason?: string;
 }
 
 export interface IntervalStopState {
@@ -143,6 +161,12 @@ export interface ScenarioParams {
   weight_queue: number;
   weight_unmet: number;
   weight_transfer: number;
+  weather_severity?: 'Normal' | 'Moderate' | 'Severe';
+  traffic_delay_mins?: number;
+  road_closure?: string;
+  bus_delay_id?: string;
+  bus_delay_mins?: number;
+  stop_crowd_boost?: Record<string, number>;
 }
 
 export interface TimeToSurgeItem {
@@ -179,3 +203,141 @@ export interface UserSession {
   badge_number?: string;
   token: string;
 }
+
+// Live Routing & OpenRouteService Types
+export interface RouteStep {
+  distance_meters: number;
+  duration_seconds: number;
+  instruction: string;
+  name?: string;
+}
+
+export interface RouteResponse {
+  route_id: string;
+  origin_lat: number;
+  origin_lng: number;
+  origin_name?: string;
+  destination_lat: number;
+  destination_lng: number;
+  destination_name?: string;
+  distance_km: number;
+  duration_minutes: number;
+  geometry: [number, number][]; // [lat, lng] list for Leaflet Polyline
+  steps: RouteStep[];
+  routing_provider: string;
+  error_message?: string;
+}
+
+export interface LocationSearchItem {
+  id: string;
+  name: string;
+  label: string;
+  lat: number;
+  lng: number;
+  category?: string;
+  city?: string;
+}
+
+export interface LocationSearchResponse {
+  query: string;
+  results: LocationSearchItem[];
+}
+
+// Traccar Live GPS Tracking Types
+export interface TrackedVehicle {
+  bus_id: string;
+  bus_number: string;
+  device_id?: number | null;
+  device_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  speed_kmh?: number | null;
+  heading?: number | null;
+  last_update?: string | null;
+  status: 'LIVE' | 'STALE' | 'OFFLINE' | 'NO_GPS_FIX' | 'UNTRACKED';
+  is_live_gps: boolean;
+  assigned_stop_id?: string | null;
+  assigned_stop_name?: string | null;
+  fleet_status: string;
+  battery_level?: number | null;
+}
+
+export interface TraccarStatusResponse {
+  is_configured: boolean;
+  traccar_url: string;
+  connection_status: 'CONNECTED' | 'UNREACHABLE' | 'AUTH_FAILED' | 'NOT_CONFIGURED';
+  message: string;
+  total_registered_fleet: number;
+  active_tracked_devices: number;
+  online_devices: number;
+}
+
+export interface FleetTrackingResponse {
+  traccar_status: TraccarStatusResponse;
+  vehicles: TrackedVehicle[];
+  last_poll_time: string;
+}
+
+// Live Open-Meteo Weather Integration Types
+export interface HourlyForecastItem {
+  time: string;
+  temperature_c: number;
+  precipitation_probability: number;
+  rain_mm: number;
+  weather_condition: string;
+}
+
+export interface WeatherData {
+  location_name: string;
+  latitude: number;
+  longitude: number;
+  current_temperature_c: number | null;
+  apparent_temperature_c: number | null;
+  precipitation_mm: number | null;
+  relative_humidity_pct: number | null;
+  wind_speed_kmh: number | null;
+  weather_condition: string;
+  weather_code: number | null;
+  forecast_time: string | null;
+  last_updated_at: string;
+  status: 'live' | 'stale' | 'unavailable';
+  provider: string;
+  is_experimental_forecast_input: boolean;
+  hourly_forecast: HourlyForecastItem[];
+  message: string;
+}
+
+// Manual Crowd-Count Observation Types
+export interface CrowdObservationAudit {
+  edited_by: string;
+  edited_at: string;
+  previous_values: Record<string, any>;
+}
+
+export interface CrowdObservation {
+  id: number;
+  event_id: string;
+  occurrence_id?: string | null;
+  location: string;
+  observed_count: number;
+  observed_at: string;
+  reported_by: string;
+  reported_at: string;
+  notes?: string | null;
+  source?: string | null;
+  is_manually_reported: boolean;
+  edited_by?: string | null;
+  edited_at?: string | null;
+  audit_trail?: CrowdObservationAudit[];
+}
+
+export interface LatestObservationResponse {
+  has_observation: boolean;
+  event_id: string;
+  observation?: CrowdObservation;
+  label: string;
+  provenance_note?: string;
+  message?: string;
+}
+
+

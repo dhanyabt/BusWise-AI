@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.config import settings
-from backend.app.routes import health, stops, fleet, forecasts, scenarios, optimize, transfers, auth
+from backend.app.routes import health, stops, fleet, forecasts, scenarios, optimize, transfers, auth, routes, tracking, dataset, events, users, weather, observations
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -29,6 +29,13 @@ app.include_router(scenarios.router, prefix=settings.API_PREFIX)
 app.include_router(optimize.router, prefix=settings.API_PREFIX)
 app.include_router(transfers.router, prefix=settings.API_PREFIX)
 app.include_router(auth.router, prefix=settings.API_PREFIX)
+app.include_router(routes.router, prefix=settings.API_PREFIX)
+app.include_router(tracking.router, prefix=settings.API_PREFIX)
+app.include_router(dataset.router, prefix=settings.API_PREFIX)
+app.include_router(events.router, prefix=settings.API_PREFIX)
+app.include_router(users.router, prefix=settings.API_PREFIX)
+app.include_router(weather.router, prefix=settings.API_PREFIX)
+app.include_router(observations.router, prefix=settings.API_PREFIX)
 
 @app.get("/")
 def root_redirect():

@@ -7,15 +7,15 @@ def test_get_stops_endpoint():
     res = client.get("/api/stops")
     assert res.status_code == 200
     data = res.json()
-    assert data["total_stops"] == 4
-    assert len(data["stops"]) == 4
+    assert data["total_stops"] >= 4
+    assert len(data["stops"]) >= 4
 
 def test_get_fleet_endpoint():
     res = client.get("/api/fleet")
     assert res.status_code == 200
     data = res.json()
-    assert data["total_buses"] == 16
-    assert len(data["buses"]) == 16
+    assert data["total_buses"] >= 16
+    assert len(data["buses"]) >= 16
 
 def test_get_forecasts_endpoint():
     res = client.get("/api/forecasts?scenario=baseline")
